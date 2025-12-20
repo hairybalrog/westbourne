@@ -1,0 +1,37 @@
+name: Weekly Update
+
+on:
+  schedule:
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+jobs:
+  fetch-results:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch results
+        env:
+          CLUB_NUM: ${{ secrets.CLUB_NUM }}
+          CLUB_NAME: ${{ secrets.CLUB_NAME }}
+          DATA_URL: ${{ secrets.DATA_URL }}
+        run: python fetch_results.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add club_results.csv
+          git diff --staged --quiet || git commit -m "Update results $(date +'%Y-%m-%d')"
+          git push
