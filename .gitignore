@@ -1,0 +1,6 @@
+*.txt
+*.gs
+*.xlsx
+*.pyc
+.env
+.claude/
