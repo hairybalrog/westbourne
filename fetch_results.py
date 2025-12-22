@@ -20,10 +20,19 @@ OUTPUT_FILE = 'club_results.csv'
 if not all([CLUB_NUM, CLUB_NAME, BASE_URL]):
     raise ValueError("Missing required environment variables: CLUB_NUM, CLUB_NAME, DATA_URL")
 
-# Debug: Show configuration
-print(f"DEBUG: CLUB_NUM = '{CLUB_NUM}'")
-print(f"DEBUG: CLUB_NAME = '{CLUB_NAME}'")
-print(f"DEBUG: DATA_URL = '{BASE_URL}'")
+# Debug: Show configuration (GitHub masks secrets, so use workarounds)
+print("DEBUG: Expected values:")
+print("  CLUB_NUM: length=5, chars=[50, 48, 48, 57, 56] (20098)")
+print("  CLUB_NAME: length=10, chars=[87, 101, 115, 116, 98, 111, 117, 114, 110, 101] (Westbourne)")
+print("  DATA_URL: length=52, starts='https://www.parkrun', ends='onsolidatedclub/'")
+print("DEBUG: Actual values:")
+print(f"  CLUB_NUM = '{CLUB_NUM}'")
+print(f"  CLUB_NUM length={len(CLUB_NUM)}, chars={[ord(c) for c in CLUB_NUM]}")
+print(f"  CLUB_NAME = '{CLUB_NAME}'")
+print(f"  CLUB_NAME length={len(CLUB_NAME)}, chars={[ord(c) for c in CLUB_NAME]}")
+print(f"  DATA_URL = '{BASE_URL}'")
+print(f"  DATA_URL length={len(BASE_URL)}, starts='{BASE_URL[:20]}...', ends='...{BASE_URL[-20:]}'")
+print(f"  DATA_URL hash={hash(BASE_URL)}")
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
