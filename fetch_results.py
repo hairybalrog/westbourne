@@ -20,6 +20,11 @@ OUTPUT_FILE = 'club_results.csv'
 if not all([CLUB_NUM, CLUB_NAME, BASE_URL]):
     raise ValueError("Missing required environment variables: CLUB_NUM, CLUB_NAME, DATA_URL")
 
+# Debug: Show configuration
+print(f"DEBUG: CLUB_NUM = '{CLUB_NUM}'")
+print(f"DEBUG: CLUB_NAME = '{CLUB_NAME}'")
+print(f"DEBUG: DATA_URL = '{BASE_URL}'")
+
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -62,6 +67,7 @@ def parse_results(html):
 
     # Split by h2 headers to get each parkrun event
     sections = re.split(r'<h2>', html, flags=re.IGNORECASE)
+    print(f"DEBUG: Found {len(sections)-1} parkrun sections")
 
     for section in sections[1:]:  # Skip first section (before any h2)
         # Extract event name
@@ -105,7 +111,9 @@ def parse_results(html):
 
             # Only include Westbourne members
             club = row_data.get('Club', '')
-            if CLUB_NAME.lower() in club.lower():
+            is_match = CLUB_NAME.lower() in club.lower()
+            print(f"DEBUG: Club='{club}' | Match={is_match}")
+            if is_match:
                 row_data['Event'] = event_name
                 row_data['Date'] = event_date
                 results.append(row_data)
