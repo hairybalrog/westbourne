@@ -51,6 +51,8 @@ def fetch_html(event_date=None):
     response = requests.get(url, headers=HEADERS, timeout=30)
     response.raise_for_status()
     print(f"Got {len(response.text)} characters")
+    print(f"DEBUG: Response first 1000 chars:\n{response.text[:1000]}")
+    print(f"DEBUG: Response last 500 chars:\n{response.text[-500:]}")
     return response.text
 
 
