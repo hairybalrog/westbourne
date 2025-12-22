@@ -3,7 +3,6 @@
 Fetch weekly running club results
 """
 
-import requests
 import csv
 import re
 import os
@@ -20,40 +19,55 @@ OUTPUT_FILE = 'club_results.csv'
 if not all([CLUB_NUM, CLUB_NAME, BASE_URL]):
     raise ValueError("Missing required environment variables: CLUB_NUM, CLUB_NAME, DATA_URL")
 
-# Debug: Show configuration (GitHub masks secrets, so use workarounds)
-print("DEBUG: Expected values:")
-print("  CLUB_NUM: length=5, chars=[50, 48, 48, 57, 56] (20098)")
-print("  CLUB_NAME: length=10, chars=[87, 101, 115, 116, 98, 111, 117, 114, 110, 101] (Westbourne)")
-print("  DATA_URL: length=52, starts='https://www.parkrun', ends='onsolidatedclub/'")
-print("DEBUG: Actual values:")
-print(f"  CLUB_NUM = '{CLUB_NUM}'")
-print(f"  CLUB_NUM length={len(CLUB_NUM)}, chars={[ord(c) for c in CLUB_NUM]}")
-print(f"  CLUB_NAME = '{CLUB_NAME}'")
-print(f"  CLUB_NAME length={len(CLUB_NAME)}, chars={[ord(c) for c in CLUB_NAME]}")
-print(f"  DATA_URL = '{BASE_URL}'")
-print(f"  DATA_URL length={len(BASE_URL)}, starts='{BASE_URL[:20]}...', ends='...{BASE_URL[-20:]}'")
-print(f"  DATA_URL hash={hash(BASE_URL)}")
-
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-GB,en;q=0.9',
-}
-
 
 def fetch_html(event_date=None):
-    """Fetch the consolidated club report HTML"""
+    """Fetch the consolidated club report HTML using Playwright"""
+    from playwright.sync_api import sync_playwright
+
     url = f"{BASE_URL}?clubNum={CLUB_NUM}"
     if event_date:
         url += f"&eventdate={event_date}"
 
     print(f"Fetching: {url}")
-    response = requests.get(url, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    print(f"Got {len(response.text)} characters")
-    print(f"DEBUG: Response first 1000 chars:\n{response.text[:1000]}")
-    print(f"DEBUG: Response last 500 chars:\n{response.text[-500:]}")
-    return response.text
+
+    with sync_playwright() as p:
+        # Launch with stealth settings
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--no-sandbox',
+            ]
+        )
+
+        # Create context with realistic settings
+        context = browser.new_context(
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            viewport={'width': 1920, 'height': 1080},
+            locale='en-GB',
+        )
+
+        page = context.new_page()
+
+        # Remove webdriver property
+        page.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+        """)
+
+        page.goto(url, wait_until='networkidle')
+
+        # Wait for the results table to appear
+        try:
+            page.wait_for_selector('h2', timeout=15000)
+        except:
+            print("Warning: No h2 elements found after waiting")
+
+        html = page.content()
+        browser.close()
+
+    print(f"Got {len(html)} characters")
+    return html
 
 
 def clean_text(text):
@@ -78,7 +92,6 @@ def parse_results(html):
 
     # Split by h2 headers to get each parkrun event
     sections = re.split(r'<h2>', html, flags=re.IGNORECASE)
-    print(f"DEBUG: Found {len(sections)-1} parkrun sections")
 
     for section in sections[1:]:  # Skip first section (before any h2)
         # Extract event name
@@ -120,11 +133,9 @@ def parse_results(html):
                 header = headers[j] if j < len(headers) else f'Column{j+1}'
                 row_data[header] = cell
 
-            # Only include Westbourne members
+            # Only include club members
             club = row_data.get('Club', '')
-            is_match = CLUB_NAME.lower() in club.lower()
-            print(f"DEBUG: Club='{club}' | Match={is_match}")
-            if is_match:
+            if CLUB_NAME.lower() in club.lower():
                 row_data['Event'] = event_name
                 row_data['Date'] = event_date
                 results.append(row_data)
@@ -201,7 +212,7 @@ def fetch_single_week(event_date=None):
             save_results(results, append=True)
         return results
 
-    except requests.RequestException as e:
+    except Exception as e:
         print(f"Error fetching data: {e}")
         raise
 
@@ -274,9 +285,6 @@ def main():
             for r in results:
                 print(f"  {r['Date']} | {r['Event']:20} | {r['parkrunner']:20} | {r['Time']}")
 
-    except requests.RequestException as e:
-        print(f"Error fetching data: {e}")
-        raise
     except Exception as e:
         print(f"Error: {e}")
         raise
