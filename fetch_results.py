@@ -188,7 +188,7 @@ def save_results(results, append=True):
         print("No new results to add (all duplicates)")
         return
 
-    # Write to CSV
+    # Write to CSV (append new results to end)
     file_exists = os.path.exists(OUTPUT_FILE) and append
     mode = 'a' if file_exists else 'w'
 

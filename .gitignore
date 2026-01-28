@@ -4,3 +4,10 @@
 *.pyc
 .env
 .claude/
+.westies/
+results/
+*.pdf
+fetch_race_results.py
+notes1.md
+README.md
+test_fetchers.js
